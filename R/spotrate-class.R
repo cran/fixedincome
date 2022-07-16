@@ -15,15 +15,106 @@
 #'   \item the compounding regime that specifies how to compound the spot
 #'         rate. This is a \code{Compounding} object.
 #'   \item the daycount rule to compute the compounding periods right
-#'         adjusted to the spot rate frequency (which is annual).
+#'         adjusted to the spot rate frequency.
 #'   \item the calendar according to which the number of days are counted.
 #' }
 #'
-#' The \code{SpotRate} class is a \code{numeric}, that represents the
+#' The \code{SpotRate} class is a `numeric`, that represents the
 #' interest rate and that has the slots: \code{compounding}, \code{daycount}
 #' and \code{calendar}.
 #'
+#' For example, an annual simple interest rate of 6%, that compounds in
+#' calendar days, is defined as follows:
+#'
+#' ```{r}
+#' sr_simple <- spotrate(0.06, "simple", "actual/360", "actual")
+#' sr_simple
+#' ```
+#'
+#' `actual/360` is the daycount rule and `actual` is the calendar.
+#'
+#' Differently, an annual compound interest rate of 10%, that compounds
+#' in business days according to calendar `Brazil/ANBIMA` is
+#'
+#' ```{r}
+#' sr_disc <- spotrate(0.1, "discrete", "business/252", "Brazil/ANBIMA")
+#' sr_disc
+#' ```
+#'
 #' The \code{calendar} slot is a \code{bizdays} calendar.
+#'
+#' An $100,000 investment in an instrument that pays that interst rate for 5
+#' years has the future value.
+#'
+#' ```{r}
+#' 100000 * compound(sr_disc, term(5, "years"))
+#' ```
+#'
+#' for the simple interest rate we have
+#'
+#' ```{r}
+#' 100000 * compound(sr_simple, term(5, "years"))
+#' ```
+#'
+#' SpotRate objects can be created with vectors
+#'
+#' ```{r}
+#' sr_vec <- spotrate(abs(rnorm(10)), "discrete", "business/252", "Brazil/ANBIMA")
+#' sr_vec
+#' ```
+#'
+#' and can be put into a `data.frame`
+#'
+#' ```{r}
+#' data.frame(spot_rate = sr_vec)
+#' ```
+#'
+#' once in a `data.frame`, dplyr verbs can be used to manipulate it.
+#'
+#' ```{r}
+#' require(dplyr, warn.conflicts = FALSE)
+#'
+#' data.frame(spot_rate = sr_vec) |>
+#'    mutate(comp = compound(spot_rate, term(5, "months")))
+#' ```
+#'
+#' SpotRate is `numeric`, so it executes arithmetic and comparison operations
+#' with `numeric` objects.
+#'
+#' ```{r}
+#' data.frame(spot_rate = sr_vec) |>
+#'    mutate(
+#'      new_spot_rate = spot_rate + 0.02,
+#'      check_gt_1pp = spot_rate > 0.01,
+#'      check_gt_nsr = spot_rate > new_spot_rate
+#'    )
+#' ```
+#'
+#' SpotRate vectors also are created with the concatenation function `c`.
+#'
+#' ```{r}
+#' c(sr_disc, 0.1, 0.13, 0.14, 0.15)
+#' ```
+#'
+#' Furtherly, all indexing operations of numeric objects are supported by
+#' SpotRate objects.
+#'
+#' ### Invalid Operations
+#'
+#' Operations involving SpotRate objects with different `compounding`,
+#' `daycount` or `calendar`, raise errors.
+#'
+#' This happens with the following operations:
+#'
+#' - Compare: >, <, <=, >=
+#' - Arithmetic: +, -, *, /
+#' - Concatenation: `c`
+#'
+#' ```{r}
+#' try(sr_simple + sr_disc)
+#' try(sr_simple > sr_disc)
+#' try(c(sr_simple, sr_disc))
+#' ```
 #'
 #' @export
 setClass(
@@ -47,7 +138,7 @@ setClass(
 #' @param calendar a \code{bizdays} calendar.
 #' @param .copyfrom a \code{SpotRate} object used as reference to copy
 #'        attributes.
-#' 
+#'
 #' @return A `SpotRate` object.
 #'
 #' @examples
@@ -154,7 +245,7 @@ c.SpotRate <- function(x, ...) {
 #' all given characters.
 #' If it is true the returned object is a SpotRate otherwise a \code{list} with
 #' SpotRate objects is returned.
-#' 
+#'
 #' @return A `SpotRate` object created from a string.
 #'
 #' @examples
@@ -212,9 +303,9 @@ setMethod(
   signature(e1 = "SpotRate", e2 = "SpotRate"),
   function(e1, e2) {
     e1@.Data <- callGeneric(e1@.Data, e2@.Data)
-    warn_if_spotrate_slots_differ(
+    stop_if_spotrate_slots_differ(
       e1, e2,
-      "Arith operation with SpotRate classes that have different slots"
+      "SpotRate objects have different slots"
     )
     e1
   }
@@ -262,15 +353,93 @@ setMethod(
 #'
 #' spr <- as.spotrate("0.06 simple actual/365 actual")
 #' spr == 0.06
+#' spr != 0.05
+#' spr > 0.05
+#' spr < 0.1
+#' spr >= 0.05
+#' spr <= 0.1
+#'
+#' spr1 <- spotrate(0.06, "simple", "actual/365", "actual")
+#' spr2 <- spotrate(0.02, "simple", "actual/365", "actual")
+#' spr1 == spr2
+#' spr1 != spr2
+#' spr1 > spr2
+#' spr1 < spr2
+#' spr1 >= spr2
+#' spr1 <= spr2
+#'
+#' # compare spotrate with different slots
+#' spr2 <- spotrate(0.06, "discrete", "actual/365", "actual")
+#' spr1 == spr2
+#' spr1 != spr2
+#' try(spr1 > spr2)
+#' try(spr1 < spr2)
+#' try(spr1 >= spr2)
+#' try(spr1 <= spr2)
+#'
 NULL
 
 #' @rdname spotrate-compare-method
 #' @export
 setMethod(
-  "Compare",
+  ">=",
+  signature(e1 = "SpotRate", e2 = "SpotRate"),
+  function(e1, e2) {
+    stop_if_spotrate_slots_differ(e1, e2, "SpotRate objects have different slots")
+    callGeneric(e1@.Data, e2@.Data)
+  }
+)
+
+#' @rdname spotrate-compare-method
+#' @export
+setMethod(
+  "<=",
+  signature(e1 = "SpotRate", e2 = "SpotRate"),
+  function(e1, e2) {
+    stop_if_spotrate_slots_differ(e1, e2, "SpotRate objects have different slots")
+    callGeneric(e1@.Data, e2@.Data)
+  }
+)
+
+#' @rdname spotrate-compare-method
+#' @export
+setMethod(
+  "<",
+  signature(e1 = "SpotRate", e2 = "SpotRate"),
+  function(e1, e2) {
+    stop_if_spotrate_slots_differ(e1, e2, "SpotRate objects have different slots")
+    callGeneric(e1@.Data, e2@.Data)
+  }
+)
+
+#' @rdname spotrate-compare-method
+#' @export
+setMethod(
+  ">",
+  signature(e1 = "SpotRate", e2 = "SpotRate"),
+  function(e1, e2) {
+    stop_if_spotrate_slots_differ(e1, e2, "SpotRate objects have different slots")
+    callGeneric(e1@.Data, e2@.Data)
+  }
+)
+
+#' @rdname spotrate-compare-method
+#' @export
+setMethod(
+  "==",
   signature(e1 = "SpotRate", e2 = "SpotRate"),
   function(e1, e2) {
     callGeneric(e1@.Data, e2@.Data) & check_slots(e1, e2)
+  }
+)
+
+#' @rdname spotrate-compare-method
+#' @export
+setMethod(
+  "!=",
+  signature(e1 = "SpotRate", e2 = "SpotRate"),
+  function(e1, e2) {
+    callGeneric(e1@.Data, e2@.Data) | !check_slots(e1, e2)
   }
 )
 
@@ -317,10 +486,10 @@ stop_if_spotrate_slots_differ <- function(e1, e2, msg) {
 spr_builder <- function(x) {
   function(values_) {
     if (is(values_, "SpotRate")) {
-      warn_if_spotrate_slots_differ(
+      stop_if_spotrate_slots_differ(
         x,
         values_,
-        "Given SpotRate has different slots. This is ignored in concatenation"
+        "SpotRate objects have different slots"
       )
       values_ <- as.numeric(values_)
     }

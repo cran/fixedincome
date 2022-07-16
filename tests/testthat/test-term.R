@@ -32,11 +32,11 @@ test_that("it should coerce term to character", {
     as(t, "character"),
     c("6 months", "7 months", "8 months", "9 months")
   )
-  expect_warning(t <- term(6:9, c("month", "year")))
-  expect_equal(
-    as(t, "character"),
-    c("6 months", "7 months", "8 months", "9 months")
-  )
+  # expect_warning(t <- term(6:9, c("month", "year")))
+  # expect_equal(
+  #   as(t, "character"),
+  #   c("6 months", "7 months", "8 months", "9 months")
+  # )
 })
 
 test_that("it should raise error", {
@@ -44,10 +44,19 @@ test_that("it should raise error", {
 })
 
 test_that("it should create a term object from a string", {
-  t <- as.term("6 month")
+  t <- as.term("6 months")
   expect_true(as.numeric(t) == 6)
   expect_true(t@units == "month")
+
   expect_error(as.term("nada"))
+
+  t <- as.term(c("6 months", "12 months"))
+  expect_equal(as.numeric(t), c(6, 12))
+  expect_equal(t@units, c("month", "month"))
+
+  t <- as.term(c("6 months", "1 year"))
+  expect_equal(as.numeric(t), c(6, 1))
+  expect_equal(t@units, c("month", "year"))
 })
 
 test_that("it should check the length of a term", {
@@ -74,27 +83,18 @@ test_that("it should put a term object into a data.frame column", {
 })
 
 test_that("it should not create terms with different units", {
-  expect_warning(t1 <- term(c(1, 2), c("day", "month")))
-  expect_equal(length(t1@units), 1)
-  expect_equal(t1@units, "day")
+  t1 <- term(c(1, 2), c("day", "month"))
+  expect_equal(length(t1@units), 2)
+  expect_equal(t1@units, c("day", "month"))
+  expect_error(t1 <- term(c(1, 2), c("day", "month", "year")))
 })
 
-# test_that("it should compare terms with different units", {
-#   t1 <- term(1, "day")
-#   t2 <- term(1, "year")
-#   expect_true(t1 < t2)
-#   expect_false(t1 > t2)
-#
-#   t1 <- term(1, "day")
-#   t2 <- term(1, "month")
-#   expect_true(t1 < t2)
-#   expect_false(t1 > t2)
-#
-#   t1 <- term(1, "year")
-#   t2 <- term(1, "month")
-#   expect_false(t1 < t2)
-#   expect_true(t1 > t2)
-# })
+test_that("it should ops terms", {
+  t1 <- term(1, "day")
+  t2 <- term(2, "days")
+  expect_error(t1 < t2)
+  expect_error(t1 + t2)
+})
 
 test_that("it should create a DateRangeTerm", {
   t <- term(as.Date("2022-02-14"), as.Date("2022-02-18"), "actual")

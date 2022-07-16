@@ -35,8 +35,8 @@ test_that("it should create spotratecurve with SpotRate and Term", {
   expect_s4_class(curve, "SpotRateCurve")
   expect_s4_class(curve, "SpotRate")
   expect_equal(as.numeric(curve), rates)
-  expect_true(all(curve@terms@units == "year"))
-  expect_true(all(curve@terms == terms))
+  expect_true(all(curve@terms@units == "day"))
+  expect_equal(curve@terms, todays(curve@daycount, terms_))
   expect_s4_class(curve@terms, "Term")
   expect_s4_class(curve@compounding, "Simple")
   expect_s4_class(curve@daycount, "Daycount")
@@ -80,7 +80,7 @@ test_that("it should handle terms if they are not ordered", {
   ix <- order(.terms)
   curve <- spotratecurve(spr, .terms)
   expect_equal(as.numeric(curve), rates[ix])
-  expect_true(all(curve@terms == terms))
+  expect_true(all(as.numeric(curve@terms) == terms))
 })
 
 

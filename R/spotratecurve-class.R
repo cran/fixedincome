@@ -48,7 +48,7 @@ setClass(
 #' @param .copyfrom a SpotRate object that is used as reference to build
 #'        the SpotRateCurve object.
 #' @param ... additional arguments
-#' 
+#'
 #' @return A `SpotRateCurve` object.
 #'
 #' @examples
@@ -80,6 +80,12 @@ spotratecurve.numeric <- function(x, terms, compounding, daycount,
     .copyfrom = .copyfrom
   )
 
+  terms <- if (is(terms, "Term")) {
+    todays(.underlying@daycount, terms)
+  } else if (is(terms, "numeric")) {
+    term(terms, "days")
+  }
+
   .Object <- new("SpotRateCurve",
     .Data = .underlying@.Data,
     compounding = .underlying@compounding,
@@ -101,6 +107,12 @@ spotratecurve.numeric <- function(x, terms, compounding, daycount,
 spotratecurve.SpotRate <- function(x, terms,
                                    refdate = Sys.Date(),
                                    .copyfrom = NULL, ...) {
+  terms <- if (is(terms, "Term")) {
+    todays(x@daycount, terms)
+  } else if (is(terms, "numeric")) {
+    term(terms, "days")
+  }
+
   .Object <- new("SpotRateCurve",
     .Data = x@.Data,
     compounding = x@compounding,
@@ -138,8 +150,8 @@ as.spotratecurve.ForwardRate <- function(x, refdate = Sys.Date(), ...) {
   cumfact <- cumprod(compound(x))
   cumterms <- term(cumsum(x@terms), x@terms@units)
 
-  tf <- toyears(x@daycount, cumterms)
-  rates_ <- rates(x@compounding, tf, cumfact)
+  tf <- as.numeric(toyears(x@daycount, cumterms))
+  rates_ <- implied_rate(x@compounding, tf, cumfact)
 
   spotratecurve(rates_, cumterms,
     compounding = x@compounding,
@@ -160,7 +172,7 @@ setMethod(
       x@calendar,
       refdate = x@refdate
     )
-    if (length(obj) >= 2) {
+    if (!is.null(x@interpolation) && x@interpolation@propagate) {
       interpolation(obj) <- x@interpolation
     }
     obj
@@ -176,7 +188,7 @@ setMethod(
       x@calendar,
       refdate = x@refdate
     )
-    if (length(obj) >= 2) {
+    if (!is.null(x@interpolation) && x@interpolation@propagate) {
       interpolation(obj) <- x@interpolation
     }
     obj
@@ -192,9 +204,7 @@ setMethod(
       x@calendar,
       refdate = x@refdate
     )
-    if (length(obj) >= 2) {
-      interpolation(obj) <- x@interpolation
-    }
+    interpolation(obj) <- x@interpolation
     obj
   }
 )
@@ -211,9 +221,7 @@ setReplaceMethod(
       stop("Index out of limits")
     }
     x@.Data[i] <- value
-    if (length(x) >= 2) {
-      interpolation(x) <- x@interpolation
-    }
+    interpolation(x) <- x@interpolation
     x
   }
 )
@@ -227,9 +235,7 @@ setReplaceMethod(
   ),
   function(x, i, j, ..., value) {
     x[i] <- value@.Data
-    if (length(x) >= 2) {
-      interpolation(x) <- x@interpolation
-    }
+    interpolation(x) <- x@interpolation
     x
   }
 )
@@ -258,12 +264,62 @@ setMethod(
         refdate = x@refdate
       )
     }
-    if (length(obj) >= 2) {
+    if (!is.null(x@interpolation) &&
+      x@interpolation@propagate) {
       interpolation(obj) <- x@interpolation
     }
     obj
   }
 )
+
+#' @export
+setMethod(
+  "[[",
+  signature(x = "SpotRateCurve", i = "missing", j = "missing"),
+  function(x, i, j, ...) {
+    if (is.null(x@interpolation)) {
+      obj <- spotratecurve(x@.Data, x@terms, x@compounding, x@daycount,
+        x@calendar,
+        refdate = x@refdate
+      )
+    } else {
+      rates_ <- interpolate(x@interpolation, x@terms)
+      obj <- spotratecurve(rates_, x@terms, x@compounding, x@daycount,
+        x@calendar,
+        refdate = x@refdate
+      )
+    }
+    interpolation(obj) <- x@interpolation
+    obj
+  }
+)
+
+replace_double_brackets <- function(x, i, value) {
+  contained_from <- i %in% x@terms
+  contained_to <- x@terms %in% i
+  if (any(contained_from)) {
+    x@.Data[contained_to] <- if (length(value) == 1) {
+      value
+    } else {
+      value[contained_from]
+    }
+  }
+  if (any(!contained_from)) {
+    value_ <- c(x@.Data, if (length(value) == 1) {
+      rep(value, sum(!contained_from))
+    } else {
+      value[!contained_from]
+    })
+    terms_ <- c(x@terms, i[!contained_from])
+    ix <- order(terms_)
+    x@.Data <- value_[ix]
+    x@terms <- terms_[ix]
+  }
+  if (length(x) >= 2) {
+    interpolation(x) <- x@interpolation
+  }
+  x
+}
 
 #' @export
 setReplaceMethod(
@@ -273,30 +329,7 @@ setReplaceMethod(
     value = "numeric"
   ),
   function(x, i, j, ..., value) {
-    contained_from <- i %in% x@terms
-    contained_to <- x@terms %in% i
-    if (any(contained_from)) {
-      x@.Data[contained_to] <- if (length(value) == 1) {
-        value
-      } else {
-        value[contained_from]
-      }
-    }
-    if (any(!contained_from)) {
-      value_ <- c(x@.Data, if (length(value) == 1) {
-        rep(value, sum(!contained_from))
-      } else {
-        value[!contained_from]
-      })
-      terms_ <- c(x@terms, i[!contained_from])
-      ix <- order(terms_)
-      x@.Data <- value_[ix]
-      x@terms <- terms_[ix]
-    }
-    if (length(x) >= 2) {
-      interpolation(x) <- x@interpolation
-    }
-    x
+    replace_double_brackets(x, i, value)
   }
 )
 
@@ -312,30 +345,7 @@ setReplaceMethod(
       x, value,
       "Given SpotRate objects have different slots"
     )
-    contained_from <- i %in% x@terms
-    contained_to <- x@terms %in% i
-    if (any(contained_from)) {
-      x@.Data[contained_to] <- if (length(value) == 1) {
-        value
-      } else {
-        value[contained_from]
-      }
-    }
-    if (any(!contained_from)) {
-      value_ <- c(x@.Data, if (length(value) == 1) {
-        rep(value, sum(!contained_from))
-      } else {
-        value[!contained_from]
-      })
-      terms_ <- c(x@terms, i[!contained_from])
-      ix <- order(terms_)
-      x@.Data <- value_[ix]
-      x@terms <- terms_[ix]
-    }
-    if (length(x) >= 2) {
-      interpolation(x) <- x@interpolation
-    }
-    x
+    replace_double_brackets(x, i, value)
   }
 )
 
@@ -482,7 +492,7 @@ maturities <- function(x) {
 #' @return
 #' A numeric value with the root mean squared error between the curve data point
 #' and interpolated points.
-#' 
+#'
 #' @aliases interpolation_error,SpotRateCurve-method
 #' @examples
 #' terms <- c(1, 11, 26, 27, 28)
@@ -559,7 +569,7 @@ setMethod(
   "first",
   signature(x = "SpotRateCurve", t = "Term"),
   function(x, t) {
-    idx <- toyears(x@daycount, x@terms) <= toyears(x@daycount, t)
+    idx <- as.numeric(toyears(x@daycount, x@terms)) <= as.numeric(toyears(x@daycount, t))
     x[idx]
   }
 )
@@ -585,10 +595,10 @@ setMethod(
   "last",
   signature(x = "SpotRateCurve", t = "Term"),
   function(x, t) {
-    t_tf <- toyears(x@daycount, t)
-    x_tf <- toyears(x@daycount, x@terms)
+    t_tf <- as.numeric(toyears(x@daycount, t))
+    x_tf <- as.numeric(toyears(x@daycount, x@terms))
     limit_tf <- max(x_tf) - t_tf
-    idx <- toyears(x@daycount, x@terms) >= limit_tf
+    idx <- as.numeric(toyears(x@daycount, x@terms)) >= limit_tf
     x[idx]
   }
 )
@@ -614,8 +624,8 @@ setMethod(
   "closest",
   signature(x = "SpotRateCurve", t = "Term"),
   function(x, t) {
-    t_tf <- toyears(x@daycount, t)
-    x_tf <- toyears(x@daycount, x@terms)
+    t_tf <- as.numeric(toyears(x@daycount, t))
+    x_tf <- as.numeric(toyears(x@daycount, x@terms))
     x[which.min(abs(x_tf - t_tf))]
   }
 )

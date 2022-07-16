@@ -9,12 +9,14 @@ hidden_aliases <- NULL
 
 #' @name hidden_aliases
 #' @aliases
+#' Ops,Term,Term-method
 #' Arith,SpotRate,SpotRate-method
 #' Arith,SpotRate,numeric-method
 #' Arith,numeric,SpotRate-method
 #' !=,Compounding,Compounding-method
 #' ==,Compounding,Compounding-method
 #' [,Term,numeric,ANY-method
+#' [,Term,logical,ANY-method
 #' [,ForwardRate,missing,missing-method
 #' [,ForwardRate,numeric,missing-method
 #' [,SpotRateCurve,logical,missing-method
@@ -24,6 +26,7 @@ hidden_aliases <- NULL
 #' [<-,SpotRateCurve,logical,missing,numeric-method
 #' [<-,SpotRateCurve,numeric,missing,SpotRate-method
 #' [[,SpotRateCurve,numeric,missing-method
+#' [[,SpotRateCurve,missing,missing-method
 #' [[<-,SpotRateCurve,missing,missing,SpotRateCurve-method
 #' [[<-,SpotRateCurve,numeric,missing,SpotRate-method
 #' [[<-,SpotRateCurve,numeric,missing,numeric-method

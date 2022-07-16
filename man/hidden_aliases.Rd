@@ -3,12 +3,14 @@
 \docType{data}
 \name{hidden_aliases}
 \alias{hidden_aliases}
+\alias{Ops,Term,Term-method}
 \alias{Arith,SpotRate,SpotRate-method}
 \alias{Arith,SpotRate,numeric-method}
 \alias{Arith,numeric,SpotRate-method}
 \alias{!=,Compounding,Compounding-method}
 \alias{==,Compounding,Compounding-method}
 \alias{[,Term,numeric,ANY-method}
+\alias{[,Term,logical,ANY-method}
 \alias{[,ForwardRate,missing,missing-method}
 \alias{[,ForwardRate,numeric,missing-method}
 \alias{[,SpotRateCurve,logical,missing-method}
@@ -18,6 +20,7 @@
 \alias{[<-,SpotRateCurve,logical,missing,numeric-method}
 \alias{[<-,SpotRateCurve,numeric,missing,SpotRate-method}
 \alias{[[,SpotRateCurve,numeric,missing-method}
+\alias{[[,SpotRateCurve,missing,missing-method}
 \alias{[[<-,SpotRateCurve,missing,missing,SpotRateCurve-method}
 \alias{[[<-,SpotRateCurve,numeric,missing,SpotRate-method}
 \alias{[[<-,SpotRateCurve,numeric,missing,numeric-method}

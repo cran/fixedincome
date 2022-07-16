@@ -41,19 +41,19 @@ setGeneric(
 #' @param object a Interpolation object.
 #' @param x a SpotRateCurve object.
 #' @param ... additional arguments. Currently unused.
-#' 
+#'
 #' This method is used internally when the interpolation is set to a curve.
 #' It uses the current state of the curve to build the interpolation function.
 #' This is similar to call `approxfun` and `splinefun` to create functions that
 #' perform interpolation of the given data points.
-#' 
+#'
 #' This method shouldn't be directly called, it is for internal use only.
 #'
 #' @return
 #' A `Interpolation` object with the slot `func` properly defined.
 #' This slot is set with a `function` (closure) that executes
 #' the interpolation method.
-#' 
+#'
 #' @aliases
 #' prepare_interpolation,FlatForward,SpotRateCurve-method
 #' prepare_interpolation,HermiteSpline,SpotRateCurve-method
@@ -84,7 +84,7 @@ setGeneric(
 #' @param object a Interpolation object with initial parameters set.
 #' @param x a SpotRateCurve object.
 #' @param ... additional arguments. Currently unused.
-#' 
+#'
 #' @return A `Interpolation` object.
 #' @aliases
 #' fit_interpolation,NelsonSiegel,SpotRateCurve-method
@@ -114,7 +114,11 @@ setReplaceMethod(
   "interpolation",
   signature(x = "SpotRateCurve", value = "Interpolation"),
   function(x, value) {
-    x@interpolation <- prepare_interpolation(value, x)
+    if (length(x) >= 2) {
+      x@interpolation <- prepare_interpolation(value, x)
+    } else {
+      warning("interpolation<- not set - curve with less than 2 elements")
+    }
     x
   }
 )
@@ -123,7 +127,7 @@ setReplaceMethod(
   "interpolation",
   signature(x = "SpotRateCurve", value = "NULL"),
   function(x, value) {
-    x@interpolation <- value
+    x@interpolation <- NULL
     x
   }
 )
@@ -138,10 +142,10 @@ setMethod(
     interp_fun <- approxfun(interp_coords, method = "linear")
     dc <- x@daycount
     comp <- x@compounding
-    object@func <- function(term) {
-      log.price <- interp_fun(term)
+    object@func <- function(term_) {
+      log.price <- interp_fun(term_)
       price <- exp(log.price)
-      rates(comp, toyears(dc, term, "days"), price)
+      implied_rate(comp, as.numeric(toyears(dc, term(term_, "days"))), price)
     }
     object
   }
@@ -203,68 +207,5 @@ setMethod(
     interp_fun <- splinefun(interp_coords, method = "hyman")
     object@func <- function(term) interp_fun(term)
     object
-  }
-)
-
-ns <- function(t, b1, b2, b3, l1) {
-  b1 +
-    b2 * (1 - exp(-l1 * t)) / (l1 * t) +
-    b3 * ((1 - exp(-l1 * t)) / (l1 * t) - exp(-l1 * t))
-}
-
-#' @export
-setMethod(
-  "prepare_interpolation",
-  signature(object = "NelsonSiegel", x = "SpotRateCurve"),
-  function(object, x, ...) {
-    object@func <- function(term) {
-      ns(term, object@beta1, object@beta2, object@beta3, object@lambda1)
-    }
-    object
-  }
-)
-
-nss <- function(t, b1, b2, b3, b4, l1, l2) {
-  ns(t, b1, b2, b3, l1) + b4 * ((1 - exp(-l2 * t)) / (l2 * t) - exp(-l2 * t))
-}
-
-#' @export
-setMethod(
-  "prepare_interpolation",
-  signature(object = "NelsonSiegelSvensson", x = "SpotRateCurve"),
-  function(object, x, ...) {
-    object@func <- function(term) {
-      nss(
-        term, object@beta1, object@beta2, object@beta3, object@beta4,
-        object@lambda1, object@lambda2
-      )
-    }
-    object
-  }
-)
-
-setMethod(
-  "fit_interpolation",
-  signature(object = "NelsonSiegel", x = "SpotRateCurve"),
-  function(object, x, ...) {
-    par <- parameters(object)
-    res <- optim(par, function(par, x) {
-      interpolation(x) <- do.call(interp_nelsonsiegel, as.list(par))
-      interpolation_error(x)
-    }, method = "BFGS", x = x)
-    do.call(interp_nelsonsiegel, as.list(res$par))
-  }
-)
-
-setMethod(
-  "fit_interpolation",
-  signature(object = "NelsonSiegelSvensson", x = "SpotRateCurve"),
-  function(object, x, ...) {
-    par <- parameters(object)
-    res <- optim(par, function(par, x) {
-      interpolation(x) <- do.call(interp_nelsonsiegelsvensson, as.list(par))
-      interpolation_error(x)
-    }, method = "BFGS", x = x)
-    do.call(interp_nelsonsiegelsvensson, as.list(res$par))
   }
 )

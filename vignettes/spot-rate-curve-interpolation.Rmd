@@ -1,0 +1,174 @@
+---
+title: "Spot Rate Curve Interpolation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Spot Rate Curve Interpolation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  out.width = "100%"
+)
+```
+
+The `fixedincome` package implements many interpolation methods for spot rate curve.
+All interpolation methods inherits the S4 class `Interpolation`.
+Once you instantiate an Interpolation object, it has to be set to a SpotRateCurve object and this
+is done throught the curve's `interpolation<-` method.
+
+There is a list with the interpolation methods implemented and their constructors:
+
+- Flat Forward: `interp_flatforward`
+- Linear: `interp_linear`
+- Log-Linear: `interp_loglinear`
+- Natural Spline: `interp_naturalspline`
+- Hermite Spline: `interp_hermitespline`
+- Nelson Siegel: `interp_nelsonsiegel`
+- Nelson Siegel Svensson: `interp_nelsonsiegelsvensson`
+- Flat Forward COPOM: `interp_flatforwardcopom`
+  (thru [copom](https://github.com/wilsonfreitas/copom) package)
+
+Here it follows an example on how to create and set an interpolation to a spot rate curve.
+
+Let's start by creating a curve using data obtained with [rb3](https://github.com/wilsonfreitas/rb3)
+package.
+
+Firstly, the packages have to be loaded.
+
+```{r message=FALSE, warning=FALSE}
+library(rb3)
+library(bizdays)
+library(dplyr)
+library(fixedincome)
+```
+
+Use the `bizdays::getdate` function to get the last business day, according to `Brazil/ANBIMA`
+calendar.
+
+```{r}
+refdate <- getdate("last bizday", Sys.Date() - 1, "Brazil/ANBIMA")
+```
+
+In order to build a term structure formed only by futures maturities, the yield curve data and
+futures data have to be mixed and this is done with the `rb3::yc_superset` function.
+Once the superset is returned, the rows related to futures maturities can be filtered.
+The first term, usually 1 business day term, is also used to anchor the curve's short part.
+
+```{r}
+yc_ <- yc_get(refdate)
+fut_ <- futures_get(refdate)
+yc_ss <- yc_superset(yc_, fut_)
+yc <- bind_rows(
+  yc_ss |> slice(1),
+  yc_ss |> filter(!is.na(symbol))
+)
+
+yc
+```
+
+With the curve data prepared, the `spotratecurve` is created.
+
+```{r}
+sp_curve <- spotratecurve(
+  yc$r_252, yc$biz_days,
+  "discrete", "business/252", "Brazil/ANBIMA",
+  refdate = refdate
+)
+
+sp_curve
+```
+
+From the output above it is possible to observe that this curve does not have an interpolation
+method defined.
+
+Let's, for example, define a flat forward interpolation for this curve.
+The FlatForward object is created and set to the curve with the `interpolation<-` method.
+
+```{r}
+interpolation(sp_curve) <- interp_flatforward()
+
+sp_curve
+```
+
+Now the output shows the curve with the interpolation defined.
+
+## Interpolate with `[[`
+
+The spot rate curve method `[[` is used to interpolte the curve.
+The term is passed as a Term object or numeric and a spot rate curve is returned with all
+interpolated values.
+
+```{r}
+sp_curve[[c(21, 42, 63)]]
+```
+
+The term 21 doesn't exist in the spot rate curve, so it is interpolated according to
+the interpolation method defined.
+Since the flat forward interpolation just connect the dots, the terms 42 and 63 have the same values
+of the spot rate curve.
+
+Other interpolation methods can be set with the `interpolation` method overriding any method set
+previously.
+
+```{r}
+interpolation(sp_curve) <- interp_naturalspline()
+sp_curve[[c(21, 42, 63)]]
+```
+
+## Unset interpolation
+
+Set interpolation to `NULL` to unset the interpolation.
+
+```{r}
+interpolation(sp_curve) <- NULL
+sp_curve[[c(21, 42, 63)]]
+```
+
+Note that for those terms in the `[[` method that don't have a related term in the spot rate curve,
+`NA` is returned.
+
+## Plot with interpolation
+
+The `fixedincome::plot` method for the spot rate curve has an argument `use_interpolation` that
+shows the interpolation together with the curve points.
+This argument defaults to `FALSE`.
+
+```{r fig.width=10, fig.height=5}
+interpolation(sp_curve) <- interp_flatforward()
+plot(sp_curve, use_interpolation = TRUE)
+```
+
+### Forward rates with and without interpolation set
+
+Once the interpolation is set, the `plot` method uses it to calculate daily forward rates.
+Otherwise, it uses the forward rates between the curve terms.
+Set the `show_forward` argument to `TRUE` to show the forward rates.
+
+```{r fig.width=10, fig.height=5}
+interpolation(sp_curve) <- NULL
+plot(sp_curve, show_forward = TRUE, legend_location = "bottomright")
+```
+
+The forward rates are drawn with step lines.
+
+If the `use_interpolation` argument is `TRUE` then the daily forward rates are calculated with
+the defined interpolation.
+
+```{r fig.width=10, fig.height=5}
+interpolation(sp_curve) <- interp_flatforward()
+plot(sp_curve, use_interpolation = TRUE, show_forward = TRUE, legend_location = "bottomright")
+```
+
+It is possible to note that the flat forward daily rates are fairly close to curve terms forward
+rates.
+
+As the interpolation changes its effects can be viewed in the forward rates dynamic.
+
+```{r fig.width=10, fig.height=5}
+interpolation(sp_curve) <- interp_naturalspline()
+plot(sp_curve, use_interpolation = TRUE, show_forward = TRUE, legend_location = "bottomright")
+```
