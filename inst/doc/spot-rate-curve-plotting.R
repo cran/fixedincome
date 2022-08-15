@@ -1,0 +1,120 @@
+## ---- include = FALSE---------------------------------------------------------
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  out.width = "100%"
+)
+
+## ----message=FALSE, warning=FALSE---------------------------------------------
+library(rb3)
+library(dplyr)
+library(fixedincome)
+library(ggplot2)
+
+## -----------------------------------------------------------------------------
+refdate <- as.Date("2022-08-09")
+yc_ <- yc_get(refdate)
+fut_ <- futures_get(refdate)
+yc_ss <- yc_superset(yc_, fut_)
+yc <- bind_rows(
+  yc_ss |> slice(1),
+  yc_ss |> filter(!is.na(symbol))
+) |>
+  filter(!duplicated(biz_days))
+
+curve <- spotratecurve(
+  yc$r_252, yc$biz_days, "discrete", "business/252", "Brazil/ANBIMA",
+  refdate = refdate
+)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+plot(curve)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+plot(curve, show_forward = TRUE)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+curve |>
+  fixedincome::first("3 years") |>
+  plot(curve, show_forward = TRUE)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+curve_2y <- curve |> fixedincome::first("2 years")
+interpolation(curve_2y) <- interp_naturalspline()
+plot(curve_2y, use_interpolation = TRUE)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+plot(curve_2y, use_interpolation = TRUE, show_forward = TRUE)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+plot(curve_2y, use_interpolation = TRUE, show_forward = TRUE, legend_location = "bottomleft")
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+ggspotratecurveplot(curve,
+  title = "DI1 spot rates", subtitle = format(refdate), caption = "Data from {rb3} package"
+)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+ggspotratecurveplot(curve,
+  title = "DI1 spot rates", subtitle = format(refdate), caption = "Data from {rb3} package",
+  curve.x.axis = "terms"
+)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+ggspotratecurveplot(curve,
+  title = "DI1 spot rates", subtitle = format(refdate), caption = "Data from {rb3} package"
+) +
+  autolayer(forwardrate(curve), size = 1)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+ggspotratecurveplot(curve_2y,
+  title = "DI1 spot rates", subtitle = format(refdate), caption = "Data from {rb3} package",
+  curve.interpolation = TRUE
+)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+autoplot(curve_2y, curve.geom = "point") +
+  autolayer(curve_2y, curve.geom = "line", curve.name = "Interpolation", curve.interpolation = TRUE)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+terms_ <- do.call(seq, as.list(range(curve_2y@terms)))
+curve_2y_interp <- curve_2y[[terms_]]
+autoplot(curve_2y, curve.geom = "point") +
+  autolayer(curve_2y_interp, curve.geom = "line") +
+  autolayer(forwardrate(curve_2y_interp),
+    curve.geom = "line", curve.name = "Forward Rate"
+  )
+
+## -----------------------------------------------------------------------------
+refdate2 <- as.Date("2022-03-09")
+yc_ <- yc_get(refdate2)
+fut_ <- futures_get(refdate2)
+yc_ss <- yc_superset(yc_, fut_)
+yc <- bind_rows(
+  yc_ss |> slice(1),
+  yc_ss |> filter(!is.na(symbol))
+) |>
+  filter(!duplicated(biz_days))
+
+curve2 <- spotratecurve(
+  yc$r_252, yc$biz_days, "discrete", "business/252", "Brazil/ANBIMA",
+  refdate = refdate2
+)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+ggspotratecurveplot(curve,
+  title = "DI1 spot rates", caption = "Data from {rb3} package",
+  curve.x.axis = "terms"
+) +
+  autolayer(curve2, curve.x.axis = "terms", size = 1) +
+  autolayer(curve2, curve.geom = "point", curve.x.axis = "terms", size = 2)
+
+## ----fig.width=10, fig.height=5-----------------------------------------------
+curve2_2y <- curve2 |> fixedincome::first("2 years")
+ggspotratecurveplot(curve_2y,
+  title = "DI1 spot rates", caption = "Data from {rb3} package",
+  curve.x.axis = "terms"
+) +
+  autolayer(curve2_2y, curve.x.axis = "terms", size = 1) +
+  autolayer(curve2_2y, curve.geom = "point", curve.x.axis = "terms", size = 2)
+

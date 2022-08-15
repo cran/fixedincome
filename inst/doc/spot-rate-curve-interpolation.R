@@ -7,21 +7,19 @@ knitr::opts_chunk$set(
 
 ## ----message=FALSE, warning=FALSE---------------------------------------------
 library(rb3)
-library(bizdays)
 library(dplyr)
 library(fixedincome)
 
 ## -----------------------------------------------------------------------------
-refdate <- getdate("last bizday", Sys.Date() - 1, "Brazil/ANBIMA")
-
-## -----------------------------------------------------------------------------
+refdate <- as.Date("2022-08-05")
 yc_ <- yc_get(refdate)
 fut_ <- futures_get(refdate)
 yc_ss <- yc_superset(yc_, fut_)
 yc <- bind_rows(
   yc_ss |> slice(1),
   yc_ss |> filter(!is.na(symbol))
-)
+) |>
+  filter(!duplicated(biz_days))
 
 yc
 

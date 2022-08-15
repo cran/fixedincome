@@ -1,3 +1,10 @@
+# fixedincome 0.0.3
+
+* ggplot2 support.
+* Added optional refdate attribute to ForwardRate class. (Issue #29)
+* New vignette "Plotting Spot Rate Curves"
+* Updated vignette "Spot Rate Curve Interpolation"
+
 # fixedincome 0.0.2
 
 ## Term class
