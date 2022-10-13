@@ -29,7 +29,7 @@ term <- function(x, ...) {
 term.numeric <- function(x, units = "days", ...) {
   value <- x
 
-  if (length(units) != length(x) & length(units) > 1) {
+  if (length(units) != length(x) && length(units) > 1) {
     stop("units and data are different sizes")
   }
 
@@ -104,7 +104,7 @@ term.Date <- function(x, end_date, calendar, ...) {
 #' In financial markets it is fairly usual to evaluate interest rates between
 #' two dates.
 #'
-#' @aliases DateRangeTerm-class
+#' @aliases DateRangeTerm-class Term-class
 #' @export
 setClass(
   "Term",

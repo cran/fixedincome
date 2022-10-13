@@ -247,10 +247,10 @@ setMethod(
   function(x, i, j, ...) {
     if (is.null(x@interpolation)) {
       if (any(i < 0)) {
-        mx <- -match(abs(i), x@terms)
+        mx <- -match(abs(i), unclass(x@terms))
         ix <- x@terms[mx]
       } else {
-        mx <- match(i, x@terms)
+        mx <- match(i, unclass(x@terms))
         ix <- i
       }
       obj <- spotratecurve(x@.Data[mx], ix, x@compounding, x@daycount,
@@ -295,8 +295,8 @@ setMethod(
 )
 
 replace_double_brackets <- function(x, i, value) {
-  contained_from <- i %in% x@terms
-  contained_to <- x@terms %in% i
+  contained_from <- i %in% unclass(x@terms)
+  contained_to <- unclass(x@terms) %in% i
   if (any(contained_from)) {
     x@.Data[contained_to] <- if (length(value) == 1) {
       value
@@ -361,8 +361,8 @@ setReplaceMethod(
       x, value,
       "Given SpotRate objects have different slots"
     )
-    contained_from <- value@terms %in% x@terms
-    contained_to <- x@terms %in% value@terms
+    contained_from <- unclass(value@terms) %in% unclass(x@terms)
+    contained_to <- unclass(x@terms) %in% unclass(value@terms)
     if (any(contained_from)) {
       x@.Data[contained_to] <- value@.Data[contained_from]
       x@terms[contained_to] <- value@terms[contained_from]
@@ -404,7 +404,7 @@ setMethod(
     spotrate_ <- as.spotrate(x)
     data.frame(
       terms = x@terms,
-      dates = offset(x@refdate, x@terms, x@calendar),
+      dates = offset(x@refdate, unclass(x@terms), x@calendar),
       rates = spotrate_
     )
   }

@@ -9,6 +9,7 @@
 status](https://www.r-pkg.org/badges/version/fixedincome)](https://CRAN.R-project.org/package=fixedincome)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![R-CMD-check](https://github.com/wilsonfreitas/R-fixedincome/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/wilsonfreitas/R-fixedincome/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 Calculations involving interest rates are usually very easy and
@@ -205,15 +206,17 @@ Parametric models like the Nelson-Siegel-Svensson model can be fitted to
 the curve.
 
 ``` r
+beta1 <- as.numeric(fixedincome::last(curve, "1 day"))
+beta2 <- as.numeric(curve[1]) - beta1
 interpolation(curve) <- fit_interpolation(
-  interp_nelsonsiegelsvensson(0.01, 0.01, 0.01, 0.01, 0.01, 0.01), curve
+  interp_nelsonsiegelsvensson(beta1, beta2, 0.01, 0.01, 2, 1), curve
 )
 
 interpolation(curve)
 #> <Interpolation: nelsonsiegelsvensson > 
 #>  Parameters:
 #>   beta1   beta2   beta3   beta4 lambda1 lambda2 
-#>   0.300  -0.181  -0.858   0.611   0.053   0.054
+#>   0.119  -0.013   1.000  -0.975   1.195   1.122
 ```
 
 Once set to the curve it is used in the plot to show daily forward

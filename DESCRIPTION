@@ -1,7 +1,7 @@
 Package: fixedincome
 Title: Fixed Income Models, Calculations, Data Structures and
         Instruments
-Version: 0.0.3
+Version: 0.0.4
 Authors@R: person("Wilson", "Freitas", email = "wilson.freitas@gmail.com",
     role = c("aut", "cre"))
 License: MIT + file LICENSE
@@ -30,8 +30,8 @@ LazyData: true
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2022-08-15 08:27:04 UTC; wilso
+Packaged: 2022-10-13 12:42:02 UTC; wilso
 Author: Wilson Freitas [aut, cre]
 Maintainer: Wilson Freitas <wilson.freitas@gmail.com>
 Repository: CRAN
-Date/Publication: 2022-08-15 08:50:23 UTC
+Date/Publication: 2022-10-13 13:02:01 UTC
