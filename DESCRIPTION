@@ -1,7 +1,7 @@
 Package: fixedincome
 Title: Fixed Income Models, Calculations, Data Structures and
         Instruments
-Version: 0.0.4
+Version: 0.0.5
 Authors@R: person("Wilson", "Freitas", email = "wilson.freitas@gmail.com",
     role = c("aut", "cre"))
 License: MIT + file LICENSE
@@ -24,14 +24,14 @@ Collate: "fixedincome-internal.R" "utils.R" "term-class.R"
         "spotratecurve-interpolation-nelsonsiegel.R" "plot.R"
         "autoplot.R" "forwardrate-class.R" "compound-method.R"
         "hidden.R" "zzz.R"
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Encoding: UTF-8
 LazyData: true
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2022-10-13 12:42:02 UTC; wilso
+Packaged: 2023-06-28 19:46:09 UTC; wilso
 Author: Wilson Freitas [aut, cre]
 Maintainer: Wilson Freitas <wilson.freitas@gmail.com>
 Repository: CRAN
-Date/Publication: 2022-10-13 13:02:01 UTC
+Date/Publication: 2023-06-30 09:20:02 UTC
